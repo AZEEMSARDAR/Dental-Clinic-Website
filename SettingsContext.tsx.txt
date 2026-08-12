@@ -1,0 +1,60 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { settingsApi } from '../api/settings';
+import { WebsiteSettingsMap } from '../types/settings';
+
+const defaultSettings: WebsiteSettingsMap = {
+  clinic_name: 'SmileCare',
+  clinic_tagline: 'Dental Clinic & Luxury Spa',
+  clinic_description: 'Experience premier, painless dentistry with world-class specialists and cutting-edge 3D technology in a serene spa-like environment.',
+  contact_email: 'care@smilecare.com',
+  contact_phone: '+1 (800) 555-SMILE',
+  emergency_phone: '+1 (800) 999-DENTAL',
+  clinic_address: '450 N Bedford Dr, Suite 300, Beverly Hills, CA 90210',
+  working_hours: 'Mon - Sat: 8:00 AM - 7:00 PM',
+  copyright_text: '© 2026 SmileCare Dental Clinic. All Rights Reserved.',
+  currency_symbol: '$',
+  timezone: 'America/Los_Angeles',
+};
+
+interface SettingsContextType {
+  settings: WebsiteSettingsMap;
+  loading: boolean;
+  refreshSettings: () => Promise<void>;
+}
+
+const SettingsContext = createContext<SettingsContextType>({
+  settings: defaultSettings,
+  loading: true,
+  refreshSettings: async () => {},
+});
+
+export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [settings, setSettings] = useState<WebsiteSettingsMap>(defaultSettings);
+  const [loading, setLoading] = useState(true);
+
+  const fetchSettings = async () => {
+    try {
+      setLoading(true);
+      const res = await settingsApi.getPublicSettings();
+      if (res && res.data) {
+        setSettings((prev) => ({ ...prev, ...res.data }));
+      }
+    } catch (err) {
+      // Gracefully fall back to defaults if API is unavailable during static preview
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  return (
+    <SettingsContext.Provider value={{ settings, loading, refreshSettings: fetchSettings }}>
+      {children}
+    </SettingsContext.Provider>
+  );
+};
+
+export const useSettings = () => useContext(SettingsContext);
